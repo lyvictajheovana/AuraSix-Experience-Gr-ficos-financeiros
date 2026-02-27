@@ -3,232 +3,219 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AuraSix Experience - Painel Ultimate</title>
+<title>AuraSix Experience - Central Financeira</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body {
-    background: linear-gradient(135deg,#0f0f1f,#1c1c3c);
-    font-family: Arial, sans-serif;
-    color:white;
-    text-align:center;
+body{
     margin:0;
-    padding:0;
-}
-
-.login-box, .dashboard {
-    margin-top:40px;
-}
-
-input, select {
-    padding:10px;
-    border-radius:8px;
-    border:none;
-    margin:5px;
-}
-
-button {
-    padding:10px 20px;
-    border:none;
-    border-radius:8px;
-    background:#a855f7;
+    font-family:Arial, sans-serif;
+    background:linear-gradient(135deg,#0f0f1f,#1b1b3a);
     color:white;
-    cursor:pointer;
-    font-weight:bold;
-    margin:5px;
 }
 
-button:hover { background:#9333ea; }
-
-.card {
-    background:#141432;
+h1{
+    text-align:center;
     padding:20px;
-    margin:15px auto;
-    width:90%;
+    color:#a855f7;
+}
+
+.dashboard{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px,1fr));
+    gap:20px;
+    padding:20px;
+}
+
+.card{
+    background:#141432;
+    padding:15px;
     border-radius:12px;
 }
 
-canvas { 
-    background:#1c1c3c; 
-    border-radius:10px; 
+canvas{
+    background:#1c1c3c;
+    border-radius:10px;
     padding:10px;
 }
 
-h1 { color:#a855f7; }
+.resumo{
+    text-align:center;
+    font-size:18px;
+}
+
+button{
+    background:#a855f7;
+    border:none;
+    padding:10px 18px;
+    color:white;
+    border-radius:8px;
+    cursor:pointer;
+    margin-top:10px;
+}
+
+button:hover{
+    background:#9333ea;
+}
 </style>
 </head>
 <body>
 
-<div class="login-box" id="loginBox">
-<h2>🔐 Acesso Administrativo</h2>
-<input type="password" id="senha" placeholder="Digite a senha">
-<button onclick="login()">Entrar</button>
+<h1>📊 AuraSix Experience • Central Financeira</h1>
+
+<div class="resumo" id="resumo"></div>
+<div style="text-align:center;">
+<button onclick="adicionarEventoManual()">➕ Adicionar Evento</button>
 </div>
 
-<div class="dashboard" id="dashboard" style="display:none;">
-
-<h1>📊 Painel Ultimate AuraSix</h1>
+<div class="dashboard">
 
 <div class="card">
-<h3>Adicionar Evento</h3>
-<select id="tipoEvento">
-<option value="Neon">Neon</option>
-<option value="Premium">Premium</option>
-<option value="Lux">Lux</option>
-</select>
-<input type="number" id="valorEvento" placeholder="Valor (5000-9000)">
-<select id="mesEvento">
-<option value="Atual">Mês Atual</option>
-<option value="Passado">Mês Passado</option>
-</select>
-<button onclick="adicionarEvento()">Adicionar</button>
+<canvas id="graficoLinha"></canvas>
 </div>
 
 <div class="card">
-<h3>Resumo Financeiro</h3>
-<p id="resumo"></p>
-<button onclick="gerarPDF()">📄 Gerar PDF</button>
+<canvas id="graficoBarras"></canvas>
 </div>
 
 <div class="card">
-<canvas id="graficoFaturamento"></canvas>
+<canvas id="graficoArea"></canvas>
 </div>
 
 <div class="card">
-<canvas id="graficoGastos"></canvas>
-</div>
-
-<div class="card">
-<canvas id="graficoPrevisao"></canvas>
+<canvas id="graficoHorizontal"></canvas>
 </div>
 
 </div>
 
 <script>
-const SENHA_CORRETA = "aurasix2026";
-let eventos = JSON.parse(localStorage.getItem("eventosUltimate")) || [];
 
-function login(){
-    let senha = document.getElementById("senha").value;
-    if(senha === SENHA_CORRETA){
-        document.getElementById("loginBox").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        atualizarGraficos();
-    } else {
-        alert("Senha incorreta!");
-    }
+let eventos = [];
+let mesAtual = [];
+let mesPassado = [];
+
+function gerarValor(){
+    return (Math.random() * (9000 - 5000) + 5000).toFixed(2);
 }
 
-function salvar(){
-    localStorage.setItem("eventosUltimate", JSON.stringify(eventos));
+function adicionarEventoManual(){
+    adicionarEvento();
 }
 
 function adicionarEvento(){
-    let tipo = document.getElementById("tipoEvento").value;
-    let valor = parseFloat(document.getElementById("valorEvento").value);
-    let mes = document.getElementById("mesEvento").value;
+    let valor = parseFloat(gerarValor());
+    eventos.push(valor);
 
-    if(valor >= 5000 && valor <= 9000){
-        eventos.push({tipo, valor, mes});
-        salvar();
-        atualizarGraficos();
+    if(Math.random() > 0.5){
+        mesAtual.push(valor);
     } else {
-        alert("Valor deve estar entre 5000 e 9000");
+        mesPassado.push(valor);
     }
+
+    atualizar();
 }
 
-function calcularFinanceiro(){
-    let atual = eventos.filter(e => e.mes === "Atual").reduce((s,e)=>s+e.valor,0);
-    let passado = eventos.filter(e => e.mes === "Passado").reduce((s,e)=>s+e.valor,0);
-    let gastos = (atual+passado)*0.5;
-    let lucro = (atual+passado)-gastos;
-    return {atual, passado, gastos, lucro};
+function calcular(){
+    let total = eventos.reduce((a,b)=>a+b,0);
+    let gastosFuncionarios = total * 0.3;
+    let outrosGastos = total * 0.2;
+    let lucro = total - (gastosFuncionarios + outrosGastos);
+
+    return {total, gastosFuncionarios, outrosGastos, lucro};
 }
 
-function atualizarGraficos(){
-    let fin = calcularFinanceiro();
+function atualizar(){
+    let fin = calcular();
 
-    document.getElementById("resumo").innerHTML = 
-        "💰 Mês Atual: R$ "+fin.atual.toFixed(2)+"<br>"+
-        "📅 Mês Passado: R$ "+fin.passado.toFixed(2)+"<br>"+
-        "📉 Gastos Estimados: R$ "+fin.gastos.toFixed(2)+"<br>"+
-        "🚀 Lucro Total: R$ "+fin.lucro.toFixed(2);
+    document.getElementById("resumo").innerHTML =
+        "💰 Total Faturado: R$ "+fin.total.toFixed(2)+" | "+
+        "📉 Funcionários: R$ "+fin.gastosFuncionarios.toFixed(2)+" | "+
+        "🧾 Outros: R$ "+fin.outrosGastos.toFixed(2)+" | "+
+        "🚀 Lucro: R$ "+fin.lucro.toFixed(2);
 
-    // Faturamento
-    graficoFaturamento.data.labels = eventos.map((_,i)=> "Evento "+(i+1));
-    graficoFaturamento.data.datasets[0].data = eventos.map(e=>e.valor);
-    graficoFaturamento.update();
+    graficoLinha.data.labels = eventos.map((_,i)=>"Evento "+(i+1));
+    graficoLinha.data.datasets[0].data = eventos;
+    graficoLinha.update();
 
-    // Gastos
-    graficoGastos.data.datasets[0].data = [
-        fin.gastos*0.6, // Funcionários
-        fin.gastos*0.4  // Outros
+    graficoBarras.data.labels = eventos.map((_,i)=>"Ev "+(i+1));
+    graficoBarras.data.datasets[0].data = eventos;
+    graficoBarras.update();
+
+    graficoArea.data.datasets[0].data = [
+        mesPassado.reduce((a,b)=>a+b,0),
+        mesAtual.reduce((a,b)=>a+b,0)
     ];
-    graficoGastos.update();
+    graficoArea.update();
 
-    // Previsão
-    let previsao = fin.atual*1.2; // previsão simples fictícia
-    graficoPrevisao.data.datasets[0].data = [fin.atual, previsao];
-    graficoPrevisao.update();
+    graficoHorizontal.data.datasets[0].data = [
+        fin.gastosFuncionarios,
+        fin.outrosGastos,
+        fin.lucro
+    ];
+    graficoHorizontal.update();
 }
 
-// Gráficos
-let ctxF = document.getElementById("graficoFaturamento").getContext("2d");
-let graficoFaturamento = new Chart(ctxF,{
+let graficoLinha = new Chart(document.getElementById("graficoLinha"),{
     type:"line",
     data:{
-        labels: [],
+        labels:[],
         datasets:[{
             label:"Faturamento por Evento",
             data:[],
             borderColor:"#a855f7",
             backgroundColor:"rgba(168,85,247,0.3)",
             fill:true,
-            tension:0.3
+            tension:0.4
         }]
     }
 });
 
-let ctxG = document.getElementById("graficoGastos").getContext("2d");
-let graficoGastos = new Chart(ctxG,{
+let graficoBarras = new Chart(document.getElementById("graficoBarras"),{
     type:"bar",
     data:{
-        labels:["Funcionários","Outros"],
+        labels:[],
         datasets:[{
-            label:"Gastos",
-            data:[0,0],
-            backgroundColor:["#9333ea","#6366f1"]
+            label:"Entrada por Evento",
+            data:[],
+            backgroundColor:"#6366f1"
         }]
     }
 });
 
-let ctxP = document.getElementById("graficoPrevisao").getContext("2d");
-let graficoPrevisao = new Chart(ctxP,{
+let graficoArea = new Chart(document.getElementById("graficoArea"),{
+    type:"line",
+    data:{
+        labels:["Mês Passado","Mês Atual"],
+        datasets:[{
+            label:"Comparação Mensal",
+            data:[0,0],
+            backgroundColor:"rgba(34,197,94,0.4)",
+            borderColor:"#22c55e",
+            fill:true,
+            tension:0.4
+        }]
+    }
+});
+
+let graficoHorizontal = new Chart(document.getElementById("graficoHorizontal"),{
     type:"bar",
     data:{
-        labels:["Atual","Previsão"],
+        labels:["Funcionários","Outros Gastos","Lucro"],
         datasets:[{
-            label:"Previsão Faturamento",
-            data:[0,0],
-            backgroundColor:["#a855f7","#facc15"]
+            label:"Distribuição Financeira",
+            data:[0,0,0],
+            backgroundColor:["#f97316","#06b6d4","#a855f7"]
         }]
+    },
+    options:{
+        indexAxis:'y'
     }
 });
 
-function gerarPDF(){
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    let fin = calcularFinanceiro();
-    doc.text("📊 AuraSix Experience - Relatório Financeiro", 10, 10);
-    doc.text(`Mês Atual: R$ ${fin.atual.toFixed(2)}`, 10, 20);
-    doc.text(`Mês Passado: R$ ${fin.passado.toFixed(2)}`, 10, 30);
-    doc.text(`Gastos: R$ ${fin.gastos.toFixed(2)}`, 10, 40);
-    doc.text(`Lucro Total: R$ ${fin.lucro.toFixed(2)}`, 10, 50);
-    doc.save("Relatorio_AuraSix.pdf");
-}
+setInterval(()=>{
+    adicionarEvento();
+},5000);
 
-atualizarGraficos();
 </script>
 
 </body>
