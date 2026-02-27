@@ -1,9 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AuraSix Market Pro</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+body{
+    margin:0;
+    background:#0b1220;
+    font-family:Arial, sans-serif;
+    color:white;
+}
+
+header{
+    background:#111827;
+    padding:20px;
+    text-align:center;
+    font-size:24px;
+    color:#00ff88;
+    font-weight:bold;
+}
+
+.container{
+    width:95%;
+    max-width:1300px;
+    margin:20px auto;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:20px;
+}
+
+.card{
+    background:#111827;
+    padding:20px;
+    border-radius:12px;
+}
+
+button{
+    padding:10px 15px;
+    border:none;
+    border-radius:8px;
+    font-weight:bold;
+    cursor:pointer;
+    margin-bottom:10px;
+}
+
+.btn-green{ background:#00ff88; }
+.btn-red{ background:#ff4444; color:white; }
+
+.indicador{
+    background:#0f172a;
+    padding:12px;
+    border-radius:8px;
+    margin-bottom:10px;
+    font-size:14px;
+}
+
+.historico{
+    max-height:250px;
+    overflow-y:auto;
+    font-size:13px;
+}
+</style>
+</head>
+<body>
+
+<header>📈 AuraSix Market Pro</header>
+
+<div class="container">
+<div class="grid">
+
+<div class="card">
+<canvas id="grafico"></canvas>
+</div>
+
+<div class="card">
+
+<div id="valor" class="indicador"></div>
+<div id="lucro" class="indicador"></div>
+<div id="gastos" class="indicador"></div>
+
+<button class="btn-green" onclick="simularEvento()">Simular Evento</button>
+<button class="btn-green" onclick="injetarMilhao()">Injetar 1 Milhão</button>
+<button class="btn-red" onclick="toggleMercado()" id="btnToggle">Pausar Mercado</button>
+
+<hr>
+
+<div class="historico" id="historico"></div>
+
+</div>
+
+</div>
+</div>
+
 <script>
 
-let preco = 250000;
+let preco = 200000;
 let dados = [];
-let labels = [];
+let medias = [];
 let volume = [];
+let labels = [];
 let rodando = true;
 let chart;
 
@@ -11,9 +113,25 @@ function aleatorio(min,max){
     return parseFloat((Math.random()*(max-min)+min).toFixed(2));
 }
 
+function calcularMedia(periodo=5){
+    let resultado = [];
+    for(let i=0;i<dados.length;i++){
+        if(i < periodo-1){
+            resultado.push(null);
+        } else {
+            let soma = 0;
+            for(let j=0;j<periodo;j++){
+                soma += dados[i-j];
+            }
+            resultado.push(soma/periodo);
+        }
+    }
+    return resultado;
+}
+
 document.addEventListener("DOMContentLoaded", function(){
 
-    const ctx = document.getElementById("graficoPrincipal");
+    const ctx = document.getElementById("grafico");
 
     chart = new Chart(ctx,{
         data:{
@@ -25,21 +143,27 @@ document.addEventListener("DOMContentLoaded", function(){
                 data:dados,
                 borderWidth:3,
                 tension:0.4,
-                pointRadius:0,
-                yAxisID:"y"
+                pointRadius:0
+            },
+            {
+                type:"line",
+                label:"Média Móvel",
+                data:medias,
+                borderDash:[6,6],
+                borderWidth:2,
+                tension:0.4,
+                pointRadius:0
             },
             {
                 type:"bar",
-                label:"Volume de Eventos",
-                data:volume,
-                yAxisID:"y1"
+                label:"Volume",
+                data:volume
             }]
         },
         options:{
             responsive:true,
             scales:{
-                y:{position:"left"},
-                y1:{position:"right", grid:{drawOnChartArea:false}}
+                y:{beginAtZero:false}
             }
         }
     });
@@ -48,35 +172,31 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 
 function atualizarIndicadores(){
-    let gastos = preco * 0.46;
+    let gastos = preco * 0.45;
     let lucro = preco - gastos;
-    let crescimentoMes = aleatorio(-5,15);
 
-    document.getElementById("valorAtual").innerHTML =
+    document.getElementById("valor").innerHTML =
         "💰 Valor Atual<br>R$ "+preco.toLocaleString("pt-BR",{minimumFractionDigits:2});
 
-    document.getElementById("lucroAtual").innerHTML =
+    document.getElementById("lucro").innerHTML =
         "🚀 Lucro<br>R$ "+lucro.toLocaleString("pt-BR",{minimumFractionDigits:2});
 
-    document.getElementById("gastosAtual").innerHTML =
+    document.getElementById("gastos").innerHTML =
         "📉 Gastos<br>R$ "+gastos.toLocaleString("pt-BR",{minimumFractionDigits:2});
-
-    document.getElementById("crescimento").innerHTML =
-        "📊 Crescimento Mensal<br>"+crescimentoMes.toFixed(2)+"%";
 }
 
 function atualizarMercado(){
 
     if(!rodando || !chart) return;
 
-    let variacao = aleatorio(-90000,90000);
+    let variacao = aleatorio(-80000,80000);
     preco += variacao;
 
     if(preco < 5000) preco = aleatorio(5000,20000);
     if(preco > 1000000) preco = aleatorio(900000,1000000);
 
     dados.push(preco);
-    volume.push(aleatorio(10000,80000));
+    volume.push(aleatorio(10000,90000));
     labels.push("T"+dados.length);
 
     if(dados.length > 30){
@@ -85,30 +205,40 @@ function atualizarMercado(){
         labels.shift();
     }
 
-    if(variacao >= 0){
-        chart.data.datasets[0].borderColor = "#00ff88";
-    } else {
-        chart.data.datasets[0].borderColor = "#ff4444";
-    }
+    medias = calcularMedia();
+    chart.data.datasets[1].data = medias;
 
     chart.update();
     atualizarIndicadores();
 }
 
-function simularEventoGrande(){
-
+function simularEvento(){
     let valorEvento = aleatorio(5000,1000000);
     preco += valorEvento;
 
-    document.getElementById("historicoEventos").innerHTML +=
-        "Evento Premium registrado — R$ "+
+    document.getElementById("historico").innerHTML +=
+        "Evento registrado — R$ "+
         valorEvento.toLocaleString("pt-BR",{minimumFractionDigits:2})+"<br>";
 
     atualizarIndicadores();
 }
 
-function pausarMercado(){
+function injetarMilhao(){
+    preco += 1000000;
+
+    document.getElementById("historico").innerHTML +=
+        "Investidor injetou — R$ 1.000.000,00 💎<br>";
+
+    atualizarIndicadores();
+}
+
+function toggleMercado(){
     rodando = !rodando;
+    document.getElementById("btnToggle").innerText =
+        rodando ? "Pausar Mercado" : "Retomar Mercado";
 }
 
 </script>
+
+</body>
+</html>
