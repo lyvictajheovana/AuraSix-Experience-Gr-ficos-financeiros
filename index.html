@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AuraSix Experience - Painel Ultimate</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body {
+    background: linear-gradient(135deg,#0f0f1f,#1c1c3c);
+    font-family: Arial, sans-serif;
+    color:white;
+    text-align:center;
+    margin:0;
+    padding:0;
+}
+
+.login-box, .dashboard {
+    margin-top:40px;
+}
+
+input, select {
+    padding:10px;
+    border-radius:8px;
+    border:none;
+    margin:5px;
+}
+
+button {
+    padding:10px 20px;
+    border:none;
+    border-radius:8px;
+    background:#a855f7;
+    color:white;
+    cursor:pointer;
+    font-weight:bold;
+    margin:5px;
+}
+
+button:hover { background:#9333ea; }
+
+.card {
+    background:#141432;
+    padding:20px;
+    margin:15px auto;
+    width:90%;
+    border-radius:12px;
+}
+
+canvas { 
+    background:#1c1c3c; 
+    border-radius:10px; 
+    padding:10px;
+}
+
+h1 { color:#a855f7; }
+</style>
+</head>
+<body>
+
+<div class="login-box" id="loginBox">
+<h2>🔐 Acesso Administrativo</h2>
+<input type="password" id="senha" placeholder="Digite a senha">
+<button onclick="login()">Entrar</button>
+</div>
+
+<div class="dashboard" id="dashboard" style="display:none;">
+
+<h1>📊 Painel Ultimate AuraSix</h1>
+
+<div class="card">
+<h3>Adicionar Evento</h3>
+<select id="tipoEvento">
+<option value="Neon">Neon</option>
+<option value="Premium">Premium</option>
+<option value="Lux">Lux</option>
+</select>
+<input type="number" id="valorEvento" placeholder="Valor (5000-9000)">
+<select id="mesEvento">
+<option value="Atual">Mês Atual</option>
+<option value="Passado">Mês Passado</option>
+</select>
+<button onclick="adicionarEvento()">Adicionar</button>
+</div>
+
+<div class="card">
+<h3>Resumo Financeiro</h3>
+<p id="resumo"></p>
+<button onclick="gerarPDF()">📄 Gerar PDF</button>
+</div>
+
+<div class="card">
+<canvas id="graficoFaturamento"></canvas>
+</div>
+
+<div class="card">
+<canvas id="graficoGastos"></canvas>
+</div>
+
+<div class="card">
+<canvas id="graficoPrevisao"></canvas>
+</div>
+
+</div>
+
+<script>
+const SENHA_CORRETA = "aurasix2026";
+let eventos = JSON.parse(localStorage.getItem("eventosUltimate")) || [];
+
+function login(){
+    let senha = document.getElementById("senha").value;
+    if(senha === SENHA_CORRETA){
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        atualizarGraficos();
+    } else {
+        alert("Senha incorreta!");
+    }
+}
+
+function salvar(){
+    localStorage.setItem("eventosUltimate", JSON.stringify(eventos));
+}
+
+function adicionarEvento(){
+    let tipo = document.getElementById("tipoEvento").value;
+    let valor = parseFloat(document.getElementById("valorEvento").value);
+    let mes = document.getElementById("mesEvento").value;
+
+    if(valor >= 5000 && valor <= 9000){
+        eventos.push({tipo, valor, mes});
+        salvar();
+        atualizarGraficos();
+    } else {
+        alert("Valor deve estar entre 5000 e 9000");
+    }
+}
+
+function calcularFinanceiro(){
+    let atual = eventos.filter(e => e.mes === "Atual").reduce((s,e)=>s+e.valor,0);
+    let passado = eventos.filter(e => e.mes === "Passado").reduce((s,e)=>s+e.valor,0);
+    let gastos = (atual+passado)*0.5;
+    let lucro = (atual+passado)-gastos;
+    return {atual, passado, gastos, lucro};
+}
+
+function atualizarGraficos(){
+    let fin = calcularFinanceiro();
+
+    document.getElementById("resumo").innerHTML = 
+        "💰 Mês Atual: R$ "+fin.atual.toFixed(2)+"<br>"+
+        "📅 Mês Passado: R$ "+fin.passado.toFixed(2)+"<br>"+
+        "📉 Gastos Estimados: R$ "+fin.gastos.toFixed(2)+"<br>"+
+        "🚀 Lucro Total: R$ "+fin.lucro.toFixed(2);
+
+    // Faturamento
+    graficoFaturamento.data.labels = eventos.map((_,i)=> "Evento "+(i+1));
+    graficoFaturamento.data.datasets[0].data = eventos.map(e=>e.valor);
+    graficoFaturamento.update();
+
+    // Gastos
+    graficoGastos.data.datasets[0].data = [
+        fin.gastos*0.6, // Funcionários
+        fin.gastos*0.4  // Outros
+    ];
+    graficoGastos.update();
+
+    // Previsão
+    let previsao = fin.atual*1.2; // previsão simples fictícia
+    graficoPrevisao.data.datasets[0].data = [fin.atual, previsao];
+    graficoPrevisao.update();
+}
+
+// Gráficos
+let ctxF = document.getElementById("graficoFaturamento").getContext("2d");
+let graficoFaturamento = new Chart(ctxF,{
+    type:"line",
+    data:{
+        labels: [],
+        datasets:[{
+            label:"Faturamento por Evento",
+            data:[],
+            borderColor:"#a855f7",
+            backgroundColor:"rgba(168,85,247,0.3)",
+            fill:true,
+            tension:0.3
+        }]
+    }
+});
+
+let ctxG = document.getElementById("graficoGastos").getContext("2d");
+let graficoGastos = new Chart(ctxG,{
+    type:"bar",
+    data:{
+        labels:["Funcionários","Outros"],
+        datasets:[{
+            label:"Gastos",
+            data:[0,0],
+            backgroundColor:["#9333ea","#6366f1"]
+        }]
+    }
+});
+
+let ctxP = document.getElementById("graficoPrevisao").getContext("2d");
+let graficoPrevisao = new Chart(ctxP,{
+    type:"bar",
+    data:{
+        labels:["Atual","Previsão"],
+        datasets:[{
+            label:"Previsão Faturamento",
+            data:[0,0],
+            backgroundColor:["#a855f7","#facc15"]
+        }]
+    }
+});
+
+function gerarPDF(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let fin = calcularFinanceiro();
+    doc.text("📊 AuraSix Experience - Relatório Financeiro", 10, 10);
+    doc.text(`Mês Atual: R$ ${fin.atual.toFixed(2)}`, 10, 20);
+    doc.text(`Mês Passado: R$ ${fin.passado.toFixed(2)}`, 10, 30);
+    doc.text(`Gastos: R$ ${fin.gastos.toFixed(2)}`, 10, 40);
+    doc.text(`Lucro Total: R$ ${fin.lucro.toFixed(2)}`, 10, 50);
+    doc.save("Relatorio_AuraSix.pdf");
+}
+
+atualizarGraficos();
+</script>
+
+</body>
+</html>
