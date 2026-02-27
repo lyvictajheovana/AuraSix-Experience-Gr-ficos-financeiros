@@ -3,163 +3,223 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AuraSix Market</title>
+<title>AuraSix Central Financeira</title>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <style>
 body{
     margin:0;
-    background:#0f172a;
+    background:#0a0f1c;
     font-family:Arial, sans-serif;
     color:white;
-    text-align:center;
 }
 
-h1{
+header{
     padding:20px;
-    color:#22c55e;
+    text-align:center;
+    font-size:24px;
+    font-weight:bold;
+    background:#111827;
+    color:#00ff88;
 }
 
 .container{
     width:95%;
+    max-width:1300px;
     margin:auto;
+    margin-top:20px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:20px;
 }
 
 .card{
-    background:#1e293b;
+    background:#111827;
     padding:20px;
     border-radius:12px;
-    margin-bottom:20px;
+}
+
+.indicadores{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:15px;
+}
+
+.indicador{
+    background:#0f172a;
+    padding:15px;
+    border-radius:10px;
+    font-size:14px;
 }
 
 button{
-    padding:12px 25px;
+    padding:10px 15px;
     border:none;
     border-radius:8px;
-    background:#22c55e;
-    color:black;
     font-weight:bold;
     cursor:pointer;
+    margin:5px 0;
 }
 
-button:hover{
-    background:#16a34a;
-}
+.btn-verde{ background:#00ff88; }
+.btn-vermelho{ background:#ff4444; color:white; }
 
-canvas{
-    background:#0b1220;
-    border-radius:12px;
+.historico{
+    max-height:300px;
+    overflow-y:auto;
+    font-size:13px;
 }
 </style>
 </head>
 <body>
 
-<h1>📈 AuraSix Bolsa Financeira</h1>
+<header>📈 AuraSix Central Financeira</header>
 
 <div class="container">
 
+<div class="grid">
+
 <div class="card">
-<button onclick="iniciarMercado()">▶ Iniciar Mercado</button>
-<p id="status">Mercado parado</p>
+<canvas id="graficoPrincipal"></canvas>
 </div>
 
 <div class="card">
-<canvas id="grafico"></canvas>
+
+<div class="indicadores">
+<div class="indicador" id="valorAtual">Valor Atual</div>
+<div class="indicador" id="lucroAtual">Lucro</div>
+<div class="indicador" id="gastosAtual">Gastos</div>
+<div class="indicador" id="crescimento">Crescimento</div>
 </div>
 
-<div class="card">
-<p id="dadosFinanceiros"></p>
+<br>
+
+<button class="btn-verde" onclick="simularEventoGrande()">Simular Grande Evento</button>
+<button class="btn-vermelho" onclick="pausarMercado()">Pausar Mercado</button>
+
+<hr>
+
+<div class="historico" id="historicoEventos"></div>
+
 </div>
 
+</div>
 </div>
 
 <script>
 
-let rodando = false;
-let precoAtual = 100000;
+document.addEventListener("DOMContentLoaded", function(){
+
+let preco = 250000;
 let dados = [];
 let labels = [];
-let intervalo;
+let volume = [];
+let rodando = true;
 
-function numeroRealista(min,max){
+function aleatorio(min,max){
     return parseFloat((Math.random()*(max-min)+min).toFixed(2));
 }
 
-const ctx = document.getElementById("grafico").getContext("2d");
+const ctx = document.getElementById("graficoPrincipal");
 
-const grafico = new Chart(ctx,{
-    type:"line",
+const chart = new Chart(ctx,{
     data:{
         labels:labels,
-        datasets:[{
-            label:"AuraSix Market Value",
+        datasets:[
+        {
+            type:"line",
+            label:"Valor de Mercado",
             data:dados,
             borderWidth:3,
-            tension:0.3,
+            tension:0.4,
             pointRadius:0,
-            fill:true
+            yAxisID:"y"
+        },
+        {
+            type:"bar",
+            label:"Volume de Eventos",
+            data:volume,
+            yAxisID:"y1"
         }]
     },
     options:{
+        responsive:true,
         scales:{
-            x:{ticks:{color:"#94a3b8"}},
-            y:{ticks:{color:"#94a3b8"}}
-        },
-        plugins:{
-            legend:{labels:{color:"white"}}
+            y:{position:"left"},
+            y1:{position:"right", grid:{drawOnChartArea:false}}
         }
     }
 });
 
-function atualizarPainel(){
+function atualizarIndicadores(){
+    let gastos = preco * 0.46;
+    let lucro = preco - gastos;
+    let crescimentoMes = aleatorio(-5,15);
 
-    let gastos = precoAtual * 0.45;
-    let lucro = precoAtual - gastos;
+    document.getElementById("valorAtual").innerHTML =
+        "💰 Valor Atual<br>R$ "+preco.toLocaleString("pt-BR",{minimumFractionDigits:2});
 
-    document.getElementById("dadosFinanceiros").innerHTML =
-        "💰 Valor Atual: R$ "+precoAtual.toLocaleString("pt-BR",{minimumFractionDigits:2})+"<br>"+
-        "📉 Gastos: R$ "+gastos.toLocaleString("pt-BR",{minimumFractionDigits:2})+"<br>"+
-        "🚀 Lucro: R$ "+lucro.toLocaleString("pt-BR",{minimumFractionDigits:2});
+    document.getElementById("lucroAtual").innerHTML =
+        "🚀 Lucro<br>R$ "+lucro.toLocaleString("pt-BR",{minimumFractionDigits:2});
+
+    document.getElementById("gastosAtual").innerHTML =
+        "📉 Gastos<br>R$ "+gastos.toLocaleString("pt-BR",{minimumFractionDigits:2});
+
+    document.getElementById("crescimento").innerHTML =
+        "📊 Crescimento Mensal<br>"+crescimentoMes.toFixed(2)+"%";
 }
 
-function gerarMovimento(){
+function atualizarMercado(){
 
-    let variacao = numeroRealista(-50000,50000);
-    precoAtual += variacao;
+    if(!rodando) return;
 
-    if(precoAtual < 5000) precoAtual = numeroRealista(5000,20000);
-    if(precoAtual > 1000000) precoAtual = numeroRealista(800000,1000000);
+    let variacao = aleatorio(-90000,90000);
+    preco += variacao;
 
-    dados.push(precoAtual);
+    if(preco < 5000) preco = aleatorio(5000,20000);
+    if(preco > 1000000) preco = aleatorio(900000,1000000);
+
+    dados.push(preco);
+    volume.push(aleatorio(10000,80000));
     labels.push("T"+dados.length);
 
     if(dados.length > 30){
         dados.shift();
+        volume.shift();
         labels.shift();
     }
 
     if(variacao >= 0){
-        grafico.data.datasets[0].borderColor = "#22c55e";
-        grafico.data.datasets[0].backgroundColor = "rgba(34,197,94,0.15)";
+        chart.data.datasets[0].borderColor = "#00ff88";
     } else {
-        grafico.data.datasets[0].borderColor = "#ef4444";
-        grafico.data.datasets[0].backgroundColor = "rgba(239,68,68,0.15)";
+        chart.data.datasets[0].borderColor = "#ff4444";
     }
 
-    grafico.update();
-    atualizarPainel();
+    chart.update();
+    atualizarIndicadores();
 }
 
-function iniciarMercado(){
+function simularEventoGrande(){
 
-    if(!rodando){
-        rodando = true;
-        document.getElementById("status").innerText = "Mercado em funcionamento...";
-        intervalo = setInterval(gerarMovimento,2000);
-    }
+    let valorEvento = aleatorio(5000,1000000);
+    preco += valorEvento;
+
+    document.getElementById("historicoEventos").innerHTML +=
+        "Evento Premium registrado — R$ "+
+        valorEvento.toLocaleString("pt-BR",{minimumFractionDigits:2})+"<br>";
 }
 
+function pausarMercado(){
+    rodando = !rodando;
+}
+
+setInterval(atualizarMercado,2000);
+
+});
 </script>
 
 </body>
