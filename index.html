@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AuraSix Exchange Elite</title>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
-<script src="https://cdn.jsdelivr.net/npm/luxon"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
+<!-- Versões compatíveis -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.3.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
 
 <style>
 body{
@@ -24,7 +25,6 @@ header{
     font-size:24px;
     font-weight:bold;
     color:#22c55e;
-    letter-spacing:1px;
 }
 
 .container{
@@ -42,7 +42,6 @@ header{
     background:#111827;
     padding:20px;
     border-radius:16px;
-    box-shadow:0 0 20px rgba(0,0,0,0.4);
 }
 
 canvas{
@@ -51,17 +50,7 @@ canvas{
 }
 
 .stat{
-    margin-bottom:18px;
-}
-
-.stat-title{
-    font-size:13px;
-    color:#9ca3af;
-}
-
-.stat-value{
-    font-size:20px;
-    font-weight:bold;
+    margin-bottom:15px;
 }
 </style>
 </head>
@@ -78,36 +67,10 @@ canvas{
 </div>
 
 <div class="card">
-<div class="stat">
-<div class="stat-title">Valor Atual</div>
-<div class="stat-value" id="valorAtual">R$ 0,00</div>
-</div>
-
-<div class="stat">
-<div class="stat-title">Variação</div>
-<div class="stat-value" id="variacao"></div>
-</div>
-
-<div class="stat">
-<div class="stat-title">Faturamento Estimado</div>
-<div class="stat-value" id="faturamento"></div>
-</div>
-
-<div class="stat">
-<div class="stat-title">Gastos Operacionais</div>
-<div class="stat-value" id="gastos"></div>
-</div>
-
-<div class="stat">
-<div class="stat-title">Lucro Projetado</div>
-<div class="stat-value" id="lucro"></div>
-</div>
-
-<div class="stat">
-<div class="stat-title">Tendência</div>
-<div class="stat-value" id="tendencia"></div>
-</div>
-
+<div class="stat"><strong>Valor Atual:</strong> <span id="valorAtual"></span></div>
+<div class="stat"><strong>Variação:</strong> <span id="variacao"></span></div>
+<div class="stat"><strong>Gastos:</strong> <span id="gastos"></span></div>
+<div class="stat"><strong>Lucro:</strong> <span id="lucro"></span></div>
 </div>
 
 </div>
@@ -120,10 +83,9 @@ canvas{
 
 <script>
 
-let precoAtual = 120000;
+let precoAtual = 150000;
 let dados = [];
 let volumeData = [];
-let fechamentos = [];
 
 function randomReal(min,max){
     return parseFloat((Math.random()*(max-min)+min).toFixed(2));
@@ -132,29 +94,18 @@ function randomReal(min,max){
 function gerarCandle(){
 
     let open = precoAtual;
-
-    let variacao = randomReal(-80000,80000);
+    let variacao = randomReal(-60000,60000);
     let close = open + variacao;
 
-    if(close < 5000) close = randomReal(5000,30000);
+    if(close < 5000) close = randomReal(5000,20000);
     if(close > 1000000) close = randomReal(800000,1000000);
 
-    let high = Math.max(open,close) + randomReal(0,30000);
-    let low = Math.min(open,close) - randomReal(0,30000);
+    let high = Math.max(open,close) + randomReal(0,20000);
+    let low = Math.min(open,close) - randomReal(0,20000);
 
     precoAtual = close;
-    fechamentos.push(close);
 
     return {open,high,low,close};
-}
-
-function mediaMovel(periodo){
-    if(fechamentos.length < periodo) return null;
-    let soma = 0;
-    for(let i=fechamentos.length-periodo;i<fechamentos.length;i++){
-        soma += fechamentos[i];
-    }
-    return soma/periodo;
 }
 
 const ctx = document.getElementById("candleChart").getContext("2d");
@@ -162,8 +113,7 @@ const ctx = document.getElementById("candleChart").getContext("2d");
 const candleChart = new Chart(ctx,{
     type:"candlestick",
     data:{
-        datasets:[
-        {
+        datasets:[{
             label:"AuraSix Market",
             data:dados,
             color:{
@@ -171,25 +121,12 @@ const candleChart = new Chart(ctx,{
                 down:"#ef4444",
                 unchanged:"#999"
             }
-        },
-        {
-            type:"line",
-            label:"Média Móvel (5)",
-            data:[],
-            borderColor:"#3b82f6",
-            borderWidth:2,
-            pointRadius:0,
-            tension:0.3
-        }
-        ]
+        }]
     },
     options:{
-        plugins:{
-            legend:{labels:{color:"white"}}
-        },
         scales:{
-            x:{ticks:{color:"#9ca3af"}},
-            y:{ticks:{color:"#9ca3af"}}
+            x:{type:'time', time:{unit:'minute'}},
+            y:{}
         }
     }
 });
@@ -205,21 +142,14 @@ const volumeChart = new Chart(ctxVol,{
             data:[],
             backgroundColor:[]
         }]
-    },
-    options:{
-        plugins:{
-            legend:{labels:{color:"white"}}
-        },
-        scales:{
-            x:{ticks:{color:"#9ca3af"}},
-            y:{ticks:{color:"#9ca3af"}}
-        }
     }
 });
 
 function atualizarPainel(open,close){
 
     let variacao = ((close-open)/open)*100;
+    let gastos = close*0.45;
+    let lucro = close-gastos;
 
     document.getElementById("valorAtual").innerHTML =
         "R$ "+close.toLocaleString("pt-BR",{minimumFractionDigits:2});
@@ -227,22 +157,11 @@ function atualizarPainel(open,close){
     document.getElementById("variacao").innerHTML =
         variacao.toFixed(2)+"%";
 
-    let faturamento = close*1.3;
-    let gastos = faturamento*0.45;
-    let lucro = faturamento-gastos;
-
-    document.getElementById("faturamento").innerHTML =
-        "R$ "+faturamento.toLocaleString("pt-BR",{minimumFractionDigits:2});
-
     document.getElementById("gastos").innerHTML =
         "R$ "+gastos.toLocaleString("pt-BR",{minimumFractionDigits:2});
 
     document.getElementById("lucro").innerHTML =
         "R$ "+lucro.toLocaleString("pt-BR",{minimumFractionDigits:2});
-
-    let tendencia = mediaMovel(5);
-    document.getElementById("tendencia").innerHTML =
-        tendencia ? "Alta 📈" : "Estável";
 }
 
 function adicionarMovimento(){
@@ -257,27 +176,18 @@ function adicionarMovimento(){
         c:candle.close
     });
 
-    let vol = randomReal(200000,1000000);
+    let vol = randomReal(200000,900000);
     volumeData.push(vol);
 
-    if(dados.length>40){
+    if(dados.length>30){
         dados.shift();
         volumeData.shift();
-        fechamentos.shift();
     }
 
     volumeChart.data.labels = dados.map((_,i)=>i+1);
     volumeChart.data.datasets[0].data = volumeData;
-
     volumeChart.data.datasets[0].backgroundColor =
         dados.map(d => d.c >= d.o ? "#22c55e" : "#ef4444");
-
-    let mm = mediaMovel(5);
-    if(mm){
-        candleChart.data.datasets[1].data.push(mm);
-    }else{
-        candleChart.data.datasets[1].data.push(null);
-    }
 
     candleChart.update();
     volumeChart.update();
@@ -287,7 +197,7 @@ function adicionarMovimento(){
 
 setInterval(()=>{
     adicionarMovimento();
-},2500);
+},2000);
 
 </script>
 
