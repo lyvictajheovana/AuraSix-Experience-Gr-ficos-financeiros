@@ -1,158 +1,50 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AuraSix Central Financeira</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-<style>
-body{
-    margin:0;
-    background:#0a0f1c;
-    font-family:Arial, sans-serif;
-    color:white;
-}
-
-header{
-    padding:20px;
-    text-align:center;
-    font-size:24px;
-    font-weight:bold;
-    background:#111827;
-    color:#00ff88;
-}
-
-.container{
-    width:95%;
-    max-width:1300px;
-    margin:auto;
-    margin-top:20px;
-}
-
-.grid{
-    display:grid;
-    grid-template-columns:2fr 1fr;
-    gap:20px;
-}
-
-.card{
-    background:#111827;
-    padding:20px;
-    border-radius:12px;
-}
-
-.indicadores{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:15px;
-}
-
-.indicador{
-    background:#0f172a;
-    padding:15px;
-    border-radius:10px;
-    font-size:14px;
-}
-
-button{
-    padding:10px 15px;
-    border:none;
-    border-radius:8px;
-    font-weight:bold;
-    cursor:pointer;
-    margin:5px 0;
-}
-
-.btn-verde{ background:#00ff88; }
-.btn-vermelho{ background:#ff4444; color:white; }
-
-.historico{
-    max-height:300px;
-    overflow-y:auto;
-    font-size:13px;
-}
-</style>
-</head>
-<body>
-
-<header>📈 AuraSix Central Financeira</header>
-
-<div class="container">
-
-<div class="grid">
-
-<div class="card">
-<canvas id="graficoPrincipal"></canvas>
-</div>
-
-<div class="card">
-
-<div class="indicadores">
-<div class="indicador" id="valorAtual">Valor Atual</div>
-<div class="indicador" id="lucroAtual">Lucro</div>
-<div class="indicador" id="gastosAtual">Gastos</div>
-<div class="indicador" id="crescimento">Crescimento</div>
-</div>
-
-<br>
-
-<button class="btn-verde" onclick="simularEventoGrande()">Simular Grande Evento</button>
-<button class="btn-vermelho" onclick="pausarMercado()">Pausar Mercado</button>
-
-<hr>
-
-<div class="historico" id="historicoEventos"></div>
-
-</div>
-
-</div>
-</div>
-
 <script>
-
-document.addEventListener("DOMContentLoaded", function(){
 
 let preco = 250000;
 let dados = [];
 let labels = [];
 let volume = [];
 let rodando = true;
+let chart;
 
 function aleatorio(min,max){
     return parseFloat((Math.random()*(max-min)+min).toFixed(2));
 }
 
-const ctx = document.getElementById("graficoPrincipal");
+document.addEventListener("DOMContentLoaded", function(){
 
-const chart = new Chart(ctx,{
-    data:{
-        labels:labels,
-        datasets:[
-        {
-            type:"line",
-            label:"Valor de Mercado",
-            data:dados,
-            borderWidth:3,
-            tension:0.4,
-            pointRadius:0,
-            yAxisID:"y"
+    const ctx = document.getElementById("graficoPrincipal");
+
+    chart = new Chart(ctx,{
+        data:{
+            labels:labels,
+            datasets:[
+            {
+                type:"line",
+                label:"Valor de Mercado",
+                data:dados,
+                borderWidth:3,
+                tension:0.4,
+                pointRadius:0,
+                yAxisID:"y"
+            },
+            {
+                type:"bar",
+                label:"Volume de Eventos",
+                data:volume,
+                yAxisID:"y1"
+            }]
         },
-        {
-            type:"bar",
-            label:"Volume de Eventos",
-            data:volume,
-            yAxisID:"y1"
-        }]
-    },
-    options:{
-        responsive:true,
-        scales:{
-            y:{position:"left"},
-            y1:{position:"right", grid:{drawOnChartArea:false}}
+        options:{
+            responsive:true,
+            scales:{
+                y:{position:"left"},
+                y1:{position:"right", grid:{drawOnChartArea:false}}
+            }
         }
-    }
+    });
+
+    setInterval(atualizarMercado,2000);
 });
 
 function atualizarIndicadores(){
@@ -175,7 +67,7 @@ function atualizarIndicadores(){
 
 function atualizarMercado(){
 
-    if(!rodando) return;
+    if(!rodando || !chart) return;
 
     let variacao = aleatorio(-90000,90000);
     preco += variacao;
@@ -211,16 +103,12 @@ function simularEventoGrande(){
     document.getElementById("historicoEventos").innerHTML +=
         "Evento Premium registrado — R$ "+
         valorEvento.toLocaleString("pt-BR",{minimumFractionDigits:2})+"<br>";
+
+    atualizarIndicadores();
 }
 
 function pausarMercado(){
     rodando = !rodando;
 }
 
-setInterval(atualizarMercado,2000);
-
-});
 </script>
-
-</body>
-</html>
