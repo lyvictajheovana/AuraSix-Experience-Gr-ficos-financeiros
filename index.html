@@ -3,218 +3,146 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AuraSix Experience - Central Financeira</title>
+<title>AuraSix Experience • Market Finance</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
     margin:0;
+    background:#0b0f1a;
     font-family:Arial, sans-serif;
-    background:linear-gradient(135deg,#0f0f1f,#1b1b3a);
     color:white;
 }
 
 h1{
     text-align:center;
     padding:20px;
-    color:#a855f7;
+    color:#22c55e;
 }
 
-.dashboard{
-    display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px,1fr));
-    gap:20px;
-    padding:20px;
+.container{
+    width:95%;
+    margin:auto;
 }
 
 .card{
-    background:#141432;
-    padding:15px;
+    background:#121826;
+    padding:20px;
     border-radius:12px;
+    margin-bottom:20px;
 }
 
 canvas{
-    background:#1c1c3c;
+    background:#0f172a;
     border-radius:10px;
-    padding:10px;
 }
 
 .resumo{
-    text-align:center;
     font-size:18px;
-}
-
-button{
-    background:#a855f7;
-    border:none;
-    padding:10px 18px;
-    color:white;
-    border-radius:8px;
-    cursor:pointer;
-    margin-top:10px;
-}
-
-button:hover{
-    background:#9333ea;
+    text-align:center;
 }
 </style>
 </head>
 <body>
 
-<h1>📊 AuraSix Experience • Central Financeira</h1>
+<h1>📈 AuraSix Experience • Bolsa Financeira</h1>
 
-<div class="resumo" id="resumo"></div>
-<div style="text-align:center;">
-<button onclick="adicionarEventoManual()">➕ Adicionar Evento</button>
-</div>
+<div class="container">
 
-<div class="dashboard">
+<div class="card resumo" id="resumo"></div>
 
 <div class="card">
-<canvas id="graficoLinha"></canvas>
-</div>
-
-<div class="card">
-<canvas id="graficoBarras"></canvas>
-</div>
-
-<div class="card">
-<canvas id="graficoArea"></canvas>
-</div>
-
-<div class="card">
-<canvas id="graficoHorizontal"></canvas>
+<canvas id="graficoBolsa"></canvas>
 </div>
 
 </div>
 
 <script>
 
-let eventos = [];
-let mesAtual = [];
-let mesPassado = [];
+let valores = [];
+let labels = [];
+let total = 0;
 
 function gerarValor(){
-    return (Math.random() * (9000 - 5000) + 5000).toFixed(2);
+    return parseFloat((Math.random() * (9000 - 5000) + 5000).toFixed(2));
 }
 
-function adicionarEventoManual(){
-    adicionarEvento();
-}
-
-function adicionarEvento(){
-    let valor = parseFloat(gerarValor());
-    eventos.push(valor);
-
-    if(Math.random() > 0.5){
-        mesAtual.push(valor);
-    } else {
-        mesPassado.push(valor);
-    }
-
-    atualizar();
-}
-
-function calcular(){
-    let total = eventos.reduce((a,b)=>a+b,0);
-    let gastosFuncionarios = total * 0.3;
-    let outrosGastos = total * 0.2;
-    let lucro = total - (gastosFuncionarios + outrosGastos);
-
-    return {total, gastosFuncionarios, outrosGastos, lucro};
-}
-
-function atualizar(){
-    let fin = calcular();
+function atualizarResumo(){
+    let gastos = total * 0.5;
+    let lucro = total - gastos;
 
     document.getElementById("resumo").innerHTML =
-        "💰 Total Faturado: R$ "+fin.total.toFixed(2)+" | "+
-        "📉 Funcionários: R$ "+fin.gastosFuncionarios.toFixed(2)+" | "+
-        "🧾 Outros: R$ "+fin.outrosGastos.toFixed(2)+" | "+
-        "🚀 Lucro: R$ "+fin.lucro.toFixed(2);
-
-    graficoLinha.data.labels = eventos.map((_,i)=>"Evento "+(i+1));
-    graficoLinha.data.datasets[0].data = eventos;
-    graficoLinha.update();
-
-    graficoBarras.data.labels = eventos.map((_,i)=>"Ev "+(i+1));
-    graficoBarras.data.datasets[0].data = eventos;
-    graficoBarras.update();
-
-    graficoArea.data.datasets[0].data = [
-        mesPassado.reduce((a,b)=>a+b,0),
-        mesAtual.reduce((a,b)=>a+b,0)
-    ];
-    graficoArea.update();
-
-    graficoHorizontal.data.datasets[0].data = [
-        fin.gastosFuncionarios,
-        fin.outrosGastos,
-        fin.lucro
-    ];
-    graficoHorizontal.update();
+        "💰 Faturamento: R$ "+total.toFixed(2)+" | "+
+        "📉 Gastos: R$ "+gastos.toFixed(2)+" | "+
+        "🚀 Lucro: R$ "+lucro.toFixed(2);
 }
 
-let graficoLinha = new Chart(document.getElementById("graficoLinha"),{
+let ctx = document.getElementById("graficoBolsa").getContext("2d");
+
+let grafico = new Chart(ctx,{
     type:"line",
     data:{
-        labels:[],
+        labels:labels,
         datasets:[{
-            label:"Faturamento por Evento",
-            data:[],
-            borderColor:"#a855f7",
-            backgroundColor:"rgba(168,85,247,0.3)",
-            fill:true,
-            tension:0.4
-        }]
-    }
-});
-
-let graficoBarras = new Chart(document.getElementById("graficoBarras"),{
-    type:"bar",
-    data:{
-        labels:[],
-        datasets:[{
-            label:"Entrada por Evento",
-            data:[],
-            backgroundColor:"#6366f1"
-        }]
-    }
-});
-
-let graficoArea = new Chart(document.getElementById("graficoArea"),{
-    type:"line",
-    data:{
-        labels:["Mês Passado","Mês Atual"],
-        datasets:[{
-            label:"Comparação Mensal",
-            data:[0,0],
-            backgroundColor:"rgba(34,197,94,0.4)",
+            label:"AuraSix Market Value",
+            data:valores,
             borderColor:"#22c55e",
+            backgroundColor:"rgba(34,197,94,0.15)",
             fill:true,
-            tension:0.4
-        }]
-    }
-});
-
-let graficoHorizontal = new Chart(document.getElementById("graficoHorizontal"),{
-    type:"bar",
-    data:{
-        labels:["Funcionários","Outros Gastos","Lucro"],
-        datasets:[{
-            label:"Distribuição Financeira",
-            data:[0,0,0],
-            backgroundColor:["#f97316","#06b6d4","#a855f7"]
+            tension:0.3,
+            pointRadius:0
         }]
     },
     options:{
-        indexAxis:'y'
+        animation:{
+            duration:800
+        },
+        scales:{
+            x:{
+                ticks:{color:"#94a3b8"}
+            },
+            y:{
+                ticks:{color:"#94a3b8"}
+            }
+        },
+        plugins:{
+            legend:{
+                labels:{color:"white"}
+            }
+        }
     }
 });
 
+function adicionarEvento(){
+
+    let novo = gerarValor();
+    total += novo;
+
+    valores.push(total);
+    labels.push("T"+valores.length);
+
+    if(valores.length > 20){
+        valores.shift();
+        labels.shift();
+    }
+
+    let ultimo = valores[valores.length-2] || 0;
+
+    if(total >= ultimo){
+        grafico.data.datasets[0].borderColor = "#22c55e";
+        grafico.data.datasets[0].backgroundColor = "rgba(34,197,94,0.15)";
+    } else {
+        grafico.data.datasets[0].borderColor = "#ef4444";
+        grafico.data.datasets[0].backgroundColor = "rgba(239,68,68,0.15)";
+    }
+
+    grafico.update();
+    atualizarResumo();
+}
+
 setInterval(()=>{
     adicionarEvento();
-},5000);
+},3000);
 
 </script>
 
